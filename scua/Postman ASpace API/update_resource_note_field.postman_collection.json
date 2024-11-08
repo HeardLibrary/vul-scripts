@@ -1,6 +1,5 @@
 {
 	"info": {
-		"_postman_id": "874ec57a-b36a-4bcc-9cf1-fb9d934fa986",
 		"name": "update_resource_note_field",
 		"description": "A demonstration collection which updates the access restriction note in a resource record if it contains a specific string. Out of the box it is set up to look for \"Reproduction and Permissions Request Form\", but the user can change that to whatever. After taking it from Oregon's example, Jacqueline adapated it to exchange the offsite digitization note to say the typical conditons for SCUA.\n\nThe collection uses a for loop to look through all notes attached to a resource record and an if statement to test whether the note is a Conditions Governing Access note.\n\nYou must have an active ArchivesSpace session saved as an environment variable for this collection to work. Run create_aspace_session first to set this up.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
