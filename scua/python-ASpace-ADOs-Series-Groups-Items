@@ -1,1 +1,92 @@
+#Created with the assistance of GitHub CoPilot 
+#Import the needed libraries to perform the task 
+import pandas as pd
+import numpy as np
+
+# Load your CSV file, EDIT THE FILE HERE
+file_path = r'C:\Users\ADDUSERNAMEHERE\Downloads\resource_###.csv'
+df = pd.read_csv(file_path)
+
+# Initialize dictionary to track series, group, and item indices for each collection
+collection_indices = {}
+
+# Define function to generate the Unit ID based on available hierarchy levels
+def generate_unit_id(collection_id, series=None, group=None, item=None):
+    # Start with the base collection identifier
+    unit_id = f"spc-mss{collection_id:04d}"
+    
+    # Add series if present
+    if series is not None:
+        unit_id += f"-s{series:02d}"
+    # Add group if present (optional)
+    if group is not None:
+        unit_id += f"-g{group:04d}"
+    # Add item if present
+    if item is not None:
+        unit_id += f"-i{item:04d}"
+    
+    return unit_id
+
+# Iterate over each row in the DataFrame and generate the appropriate Unit ID
+for idx, row in df.iterrows():
+    collection_id = row['Collection ID']
+    level = row['Level']
+    
+    if pd.notna(collection_id):
+        # Extract the numeric part of the collection ID for formatting
+        collection_id_num = int(str(collection_id).split('.')[-1])
+        
+        # Initialize collection indices if not already done
+        if collection_id_num not in collection_indices:
+            collection_indices[collection_id_num] = {'series': 1, 'group': 1, 'item': 1, 'last_level': None, 'has_group': False}
+        
+        # Determine which levels are involved based on `Level`
+        if level == 'series':
+            # New series: increment series count, reset group and item, reset group tracking
+            series = collection_indices[collection_id_num]['series']
+            collection_indices[collection_id_num]['series'] += 1
+            collection_indices[collection_id_num]['group'] = 1
+            collection_indices[collection_id_num]['item'] = 1
+            collection_indices[collection_id_num]['has_group'] = False  # Reset group tracking
+            group = None  # No group for series level
+            item = None  # No item for series level
+            # Update last level for tracking
+            collection_indices[collection_id_num]['last_level'] = 'series'
+
+        elif level == 'file':
+            # Group level: increment group, reset item, mark that group is present
+            series = collection_indices[collection_id_num]['series'] - 1  # Use last series
+            group = collection_indices[collection_id_num]['group']
+            collection_indices[collection_id_num]['group'] += 1
+            collection_indices[collection_id_num]['item'] = 1  # Reset item count within group
+            collection_indices[collection_id_num]['has_group'] = True  # Mark that a group exists
+            item = None  # No item level for group
+            # Update last level for tracking
+            collection_indices[collection_id_num]['last_level'] = 'group'
+
+        elif level == 'item':
+            # Item level: If previous level was series and no group has been added, skip group
+            series = collection_indices[collection_id_num]['series'] - 1  # Use last series
+            if collection_indices[collection_id_num]['has_group']:
+                group = collection_indices[collection_id_num]['group'] - 1  # Use last group
+            else:
+                group = None  # Skip group if no group has been encountered in this series
+            item = collection_indices[collection_id_num]['item']
+            collection_indices[collection_id_num]['item'] += 1  # Increment item
+            # Update last level for tracking
+            collection_indices[collection_id_num]['last_level'] = 'item'
+
+        # Generate Unit ID based on level hierarchy
+        unit_id = generate_unit_id(collection_id_num, series=series, group=group, item=item)
+        
+        # Update DataFrame with new Unit ID
+        df.at[idx, 'Unit ID'] = unit_id
+    else:
+        df.at[idx, 'Unit ID'] = np.nan
+
+# Save the updated DataFrame to a new CSV file
+new_file_path = r'C:\Users\ADDUSERNAMEHERE\Downloads\resource_###_updated.csv'
+df.to_csv(new_file_path, index=False)
+
+print("Unit ID field has been updated in the CSV file.")
 
