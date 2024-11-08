@@ -1,1 +1,37 @@
+# Make sure python is installed on your computer 
+# Then make sure you install Pillow is the Python imagaging library to be able to make changes, using 
+pip instsall Pillow
+from PIL import Image
+import os
 
+def tiff_to_jpeg(input_folder, output_folder):
+    # Create the output folder if it doesn't exist
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    # Loop through each file in the input folder
+    for filename in os.listdir(input_folder):
+        input_path = os.path.join(input_folder, filename)
+
+        # Check if the file is a TIFF image
+        if filename.lower().endswith(".tiff") or filename.lower().endswith(".tif"):
+            # Open the TIFF image
+            tiff_image = Image.open(input_path)
+
+            # Construct the output path with a .jpg extension
+            output_path = os.path.join(output_folder, os.path.splitext(filename)[0] + ".jpg")
+
+            # Convert and save as JPEG
+            tiff_image.convert("RGB").save(output_path, "JPEG")
+
+            print(f"Converted {filename} to {output_path}")
+
+if __name__ == "__main__":
+    # Specify the input and output folders. This is where you need to put the path to your folder of tiff images that you need updated into jpegs. It is key that you add the path and folder name that it was before and what you want after it
+    input_folder = "path/to/tiff_images"
+    output_folder = "path/to/output_folder"
+
+    # Call the function to convert TIFF to JPEG
+    tiff_to_jpeg(input_folder, output_folder)
+
+#This was created with the help of GitHub CoPilot
