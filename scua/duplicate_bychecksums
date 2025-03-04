@@ -1,0 +1,45 @@
+#pip install openpyxl 
+import pandas as pd
+from collections import defaultdict
+
+# Function to read filename and checksum pairs from an Excel file
+def read_data_from_excel(file_path):
+    df = pd.read_excel(file_path)
+    data = list(zip(df['filename'], df['sha512']))
+    return data
+
+# Path to the Excel file containing filename and checksum pairs
+file_path = "C:/Users/deverej/OneDrive - Vanderbilt/Documents/NAMEOFFILE.xlsx"
+
+# Read data from the Excel file
+data = read_data_from_excel(file_path)
+
+# Create a dictionary that maps checksums to file names
+checksum_to_filenames = defaultdict(list)
+for filename, checksum in data:
+    checksum_to_filenames[checksum].append(filename)
+
+# List of lists containing filenames that have duplicate checksums
+duplicates = [filenames for filenames in checksum_to_filenames.values() if len(filenames) > 1]
+
+# Print the duplicate files
+if duplicates:
+    print("Duplicate files:")
+    for filenames in duplicates:
+        print(", ".join(filenames))
+else:
+    print("No duplicate files found.")
+
+# Create a new DataFrame for the duplicates
+duplicate_data = []
+for filenames in duplicates:
+    for filename in filenames:
+        duplicate_data.append({'filename': filename, 'sha512': checksum_to_filenames[filename]})
+
+df_duplicates = pd.DataFrame(duplicate_data)
+
+# Path to the new Excel file for duplicates
+output_file_path = "C:/Users/deverej/OneDrive - Vanderbilt/Documents/NAMEOFCOLLECTIONDuplicates.xlsx"
+
+# Write the duplicates to a new Excel file
+df_duplicates.to_excel(output_file_path, index=False)
