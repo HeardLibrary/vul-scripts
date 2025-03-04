@@ -1,0 +1,113 @@
+#Open in visual studio code and make sure to update file paths and names. I used Presidio to identify PII 
+import os
+import csv
+from presidio_analyzer import AnalyzerEngine
+from PyPDF2 import PdfReader
+from docx import Document
+import pytesseract
+from PIL import Image
+
+# Initialize the Analyzer Engine
+analyzer = AnalyzerEngine()
+
+# Folder to scan
+folder_path = r"\\libshare.library.vanderbilt.edu\VUL\users\deverej\SIP.mss.1062\FILEPUTHERE"
+
+# Output CSV file, update name here
+output_csv = r"C:\Users\deverej\Presidio\pii_scan_results_ET.csv"
+
+# Log file to capture errors, update name
+log_file = r"C:\Users\deverej\Presidio\pii_scan_ET.txt"
+
+# Function to extract text from various file types
+def extract_text_from_file(file_path):
+    text = ""
+    try:
+        if file_path.endswith('.txt'):
+            with open(file_path, "r", encoding="utf-8") as file:
+                text = file.read()
+        elif file_path.endswith('.csv'):
+            with open(file_path, "r", encoding="utf-8") as file:
+                text = file.read()
+        elif file_path.endswith('.json'):
+            with open(file_path, "r", encoding="utf-8") as file:
+                text = file.read()
+        elif file_path.endswith('.pdf'):
+            reader = PdfReader(file_path)
+            text = "".join(page.extract_text() for page in reader.pages)
+        elif file_path.endswith('.docx'):
+            doc = Document(file_path)
+            text = "\n".join([p.text for p in doc.paragraphs])
+        elif file_path.endswith(('.jpg', '.jpeg', '.png', '.tiff', '.bmp', '.gif')):
+            text = pytesseract.image_to_string(Image.open(file_path))
+        else:
+            text = "UNSUPPORTED_FILE_TYPE"
+            with open(log_file, "a") as log:
+                log.write(f"Unsupported file type: {file_path}\n")
+    except Exception as e:
+        text = None
+        with open(log_file, "a") as log:
+            log.write(f"Error extracting text from {file_path}: {e}\n")
+    print(f"Extracted text from {file_path}:\n{text}\n")
+    return text
+
+# Function to scan a folder for PII
+def scan_folder_for_pii(folder_path):
+    with open(log_file, "a") as log:
+        log.write("Starting PII scan...\n")
+    try:
+        with open(output_csv, "w", newline='', encoding="utf-8") as csvfile:
+            fieldnames = ['file_path', 'pii_entity', 'start', 'end', 'score']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+
+            for root, dirs, files in os.walk(folder_path):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    text = extract_text_from_file(file_path)
+                    if text is None or not text.strip():  # Check if the text is None or empty
+                        print(f"Skipping empty or unsupported file: {file_path}")
+                        continue
+                    if text == "UNSUPPORTED_FILE_TYPE":
+                        print(f"Skipping unsupported file: {file_path}")
+                        continue
+                    with open(log_file, "a") as log:
+                        log.write(f"Processing file: {file_path}\n")
+                        log.flush()  # Forces writing to disk
+                    print(f"Processing file: {file_path}")
+                    if text:
+                        try:
+                            results = analyzer.analyze(
+                                text=text,
+                                entities=["CREDIT_CARD", "PHONE_NUMBER", "IBAN_CODE", "US_BANK_NUMBER", 
+                                          "US_DRIVER_LICENSE", "US_ITIN", "US_PASSPORT", "US_SSN"],
+                                language="en"
+                            )
+                            if results:
+                                print(f"Raw Presidio results for {file_path}: {results}")  # Debugging print
+                                print(f"PII found in {file_path}: {results}")
+                                for result in results:
+                                    writer.writerow({
+                                        'file_path': file_path,
+                                        'pii_entity': result.entity_type,
+                                        'start': result.start,
+                                        'end': result.end,
+                                        'score': result.score
+                                    })
+                                    print(f"- Entity: {result.entity_type}, Start: {result.start}, End: {result.end}, Confidence: {result.score}")
+                            else:
+                                print(f"No PII detected in {file_path}")
+                        except Exception as e:
+                            with open(log_file, "a") as log:
+                                log.write(f"Error reading or analyzing {file_path}: {e}\n")
+                    else:
+                        print(f"No PII found in {file_path}")
+    except Exception as e:
+        with open(log_file, "a") as log:
+            log.write(f"Error during PII scan: {e}\n")
+    finally:
+        with open(log_file, "a") as log:
+            log.write("PII scan completed.\n")
+
+# Run the scan
+scan_folder_for_pii(folder_path)
