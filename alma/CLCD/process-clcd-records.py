@@ -67,8 +67,8 @@ pdst = 'Sent/'
 
 fnamelst = [f for f in os.listdir('.') if os.path.isfile(f)]
 
-##ftp = ftplib.FTP('enterprise.clcd.com')
-##ftp.login('localcol','M@rcUpload1')
+##ftp = ftplib.FTP(clcddomain)
+##ftp.login(clcduname,clcdpwd)
 SUBJECT = 'New CLCD files'
 BODY_TEXT = f"These CLCD files are ready to be sent to CLCD.{os.linesep}"
 
