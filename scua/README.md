@@ -8,3 +8,6 @@ This was adapted from University of Oregon's scripts on GitHub to fit our reposi
 # Python script to add two levels of identifers to finding aids 
 ## Description
 This script is used to add 2 levels of identifers according to the repository's ADO file naming convention
+# Python bulkupdater 
+## Description 
+This script should work for all levels of ArchivesSpace
