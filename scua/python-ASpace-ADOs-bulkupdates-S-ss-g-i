@@ -1,0 +1,121 @@
+# Created with the assistance of GitHub Copilot
+# Import the needed libraries to perform the task
+# One thing still not quite working is the standalone -series not updating but otherwise it works! 
+import pandas as pd
+import numpy as np
+
+# Load your Excel file, EDIT THE FILE HERE
+file_path = r'C:\Users\deverej\Downloads\bulk_update.resource_978.2025-04-08.xlsx'
+df = pd.read_excel(file_path)  # Use read_excel for Excel files
+
+# Input the collection ID directly
+collection_id_num = 734  # Replace this with the actual collection ID (e.g., 734 for mss0734)
+
+# Initialize dictionary to track series, subseries, group, and item indices for each collection
+collection_indices = {
+    collection_id_num: {'series': 1, 'subseries': 1, 'group': 1, 'item': 1, 'last_level': None, 'has_group': False}
+}
+
+# Define function to generate the Component Unique Identifier based on available hierarchy levels
+def generate_unit_id(collection_id, series=None, subseries=None, group=None, item=None):
+    # Start with the base collection identifier
+    unit_id = f"spc-mss{collection_id:04d}"
+    
+    # Add series if present
+    if series is not None:
+        unit_id += f"-s{series:02d}"
+    # Add subseries if present
+    if subseries is not None:
+        unit_id += f"-ss{subseries:02d}"  # Ensure subseries starts at 01
+    # Add group if present (optional)
+    if group is not None:
+        unit_id += f"-g{group:04d}"
+    # Add item if present
+    if item is not None:
+        unit_id += f"-i{item:04d}"
+    
+    return unit_id
+
+# Mapping for "Level of Description" values to expected levels
+level_mapping = {
+    "Series [series]": "series",
+    "Sub-Series [subseries]": "subseries",
+    "File [file]": "group",  # Treat "File" as a group
+    "Item [item]": "item"
+}
+
+# Iterate over each row in the DataFrame and generate the appropriate Component Unique Identifier
+for idx, row in df.iterrows():
+    try:
+        # Map the "Level of Description" value to the expected level
+        level_description = row['Level of Description']
+        level = level_mapping.get(level_description, None)  # Default to None if not found
+
+        if level is None:
+            raise ValueError(f"Unexpected level of description: {level_description}")
+
+        # Initialize variables
+        series = None
+        subseries = None
+        group = None
+        item = None
+
+        # Determine which levels are involved based on `Level of Description`
+        if level == 'series':
+            # New series: increment series count, reset subseries, group, and item
+            series = collection_indices[collection_id_num]['series']
+            collection_indices[collection_id_num]['series'] += 1
+            collection_indices[collection_id_num]['subseries'] = 1  # Reset subseries to start at 01
+            collection_indices[collection_id_num]['group'] = 1
+            collection_indices[collection_id_num]['item'] = 1
+            collection_indices[collection_id_num]['has_group'] = False  # Reset group tracking
+
+        elif level == 'subseries':
+            # Subseries can only happen under a series
+            if collection_indices[collection_id_num]['series'] == 1:
+                raise ValueError("Subseries cannot exist without a series.")
+            # New subseries: increment subseries count, reset group and item
+            series = collection_indices[collection_id_num]['series'] - 1  # Use the current series
+            subseries = collection_indices[collection_id_num]['subseries']
+            collection_indices[collection_id_num]['subseries'] += 1  # Increment subseries
+            collection_indices[collection_id_num]['group'] = 1  # Reset group to start at 01
+            collection_indices[collection_id_num]['item'] = 1  # Reset item to start at 01
+
+        elif level == 'group':
+            # Group level: increment group, reset item, mark that group is present
+            series = collection_indices[collection_id_num]['series'] - 1  # Use last series
+            subseries = collection_indices[collection_id_num]['subseries']  # Use the current subseries (if any)
+            group = collection_indices[collection_id_num]['group']
+            collection_indices[collection_id_num]['group'] += 1
+            collection_indices[collection_id_num]['item'] = 1  # Reset item count within group
+            collection_indices[collection_id_num]['has_group'] = True  # Mark that a group exists
+
+        elif level == 'item':
+            # Item level: If no series or subseries exists, generate a simple item ID
+            if collection_indices[collection_id_num]['series'] == 1:
+                item = collection_indices[collection_id_num]['item']
+                collection_indices[collection_id_num]['item'] += 1
+            else:
+                # Otherwise, include series and subseries in the ID
+                series = collection_indices[collection_id_num]['series'] - 1  # Use last series
+                subseries = collection_indices[collection_id_num]['subseries']  # Use the current subseries
+                if collection_indices[collection_id_num]['has_group']:
+                    group = collection_indices[collection_id_num]['group'] - 1  # Use last group
+                item = collection_indices[collection_id_num]['item']
+                collection_indices[collection_id_num]['item'] += 1  # Increment item
+
+        # Generate Component Unique Identifier based on level hierarchy
+        unit_id = generate_unit_id(collection_id_num, series=series, subseries=subseries, group=group, item=item)
+        
+        # Update DataFrame with new Component Unique Identifier
+        df.at[idx, 'Component Unique Identifier'] = unit_id
+
+    except Exception as e:
+        print(f"Error processing row {idx}: {e}")
+        df.at[idx, 'Component Unique Identifier'] = None  # Mark as None for problematic rows
+
+# Save the updated DataFrame to a new Excel file
+new_file_path = r'C:\Users\deverej\Downloads\resource_0734_updated.xlsx'
+df.to_excel(new_file_path, index=False)
+
+print("Component Unique Identifier field has been updated in the Excel file.")
