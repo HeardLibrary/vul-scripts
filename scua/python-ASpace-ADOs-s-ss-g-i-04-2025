@@ -1,0 +1,104 @@
+import pandas as pd
+
+file_path = r'C:\Users\deverej\Downloads\bulk_update.resource_1131.2025-04-21.xlsx'
+df = pd.read_excel(file_path)
+
+collection_id_num = 202
+
+collection_indices = {
+    collection_id_num: {
+        'series': 1, 'subseries': 1, 'group': 1, 'item': 1,
+        'last_series': None, 'last_subseries': None, 'last_group': None
+    }
+}
+
+def generate_unit_id(collection_id, series=None, subseries=None, group=None, item=None):
+    unit_id = f"spc-mss{collection_id:04d}"
+    if series is not None:
+        unit_id += f"-s{series:02d}"
+    if subseries is not None:
+        unit_id += f"-ss{subseries:02d}"
+    if group is not None:
+        unit_id += f"-g{group:04d}"
+    if item is not None:
+        unit_id += f"-i{item:04d}"
+    return unit_id
+
+level_mapping = {
+    "Series [series]": "series",
+    "Sub-Series [subseries]": "subseries",
+    "File [file]": "group",
+    "Item [item]": "item"
+}
+
+for idx, row in df.iterrows():
+    try:
+        level_description = row['Level of Description']
+        level = level_mapping.get(level_description, None)
+        if level is None:
+            raise ValueError(f"Unexpected level of description: {level_description}")
+
+        series = None
+        subseries = None
+        group = None
+        item = None
+
+        if level == 'series':
+            series = collection_indices[collection_id_num]['series']
+            collection_indices[collection_id_num]['last_series'] = series
+            collection_indices[collection_id_num]['series'] += 1
+            collection_indices[collection_id_num]['subseries'] = 1
+            collection_indices[collection_id_num]['group'] = 1
+            collection_indices[collection_id_num]['item'] = 1
+            collection_indices[collection_id_num]['last_subseries'] = None
+            collection_indices[collection_id_num]['last_group'] = None
+
+        elif level == 'subseries':
+            last_series = collection_indices[collection_id_num]['last_series']
+            if last_series is None:
+                raise ValueError("Subseries requires a series.")
+            series = last_series
+            subseries = collection_indices[collection_id_num]['subseries']
+            collection_indices[collection_id_num]['last_subseries'] = subseries
+            collection_indices[collection_id_num]['subseries'] += 1
+            collection_indices[collection_id_num]['group'] = 1
+            collection_indices[collection_id_num]['item'] = 1
+            collection_indices[collection_id_num]['last_group'] = None
+
+        elif level == 'group':
+            series = collection_indices[collection_id_num]['last_series']
+            subseries = collection_indices[collection_id_num]['last_subseries']
+            group = collection_indices[collection_id_num]['group']
+            collection_indices[collection_id_num]['last_group'] = group
+            collection_indices[collection_id_num]['group'] += 1
+            collection_indices[collection_id_num]['item'] = 1
+            if series is None and subseries is None:
+                group = collection_indices[collection_id_num]['group'] - 1
+
+        elif level == 'item':
+            series = collection_indices[collection_id_num]['last_series']
+            subseries = collection_indices[collection_id_num]['last_subseries']
+            group = collection_indices[collection_id_num]['last_group']
+            item = collection_indices[collection_id_num]['item']
+            collection_indices[collection_id_num]['item'] += 1
+            if series is None and subseries is None and group is None:
+                item = collection_indices[collection_id_num]['item'] - 1
+                group = None
+
+        unit_id = generate_unit_id(
+            collection_id=collection_id_num,
+            series=series,
+            subseries=subseries,
+            group=group,
+            item=item
+        )
+
+        df.at[idx, 'Component Unique Identifier'] = unit_id
+
+    except Exception as e:
+        print(f"Error processing row {idx}: {e}")
+        df.at[idx, 'Component Unique Identifier'] = None
+
+new_file_path = r'C:\Users\deverej\Downloads\resource_0202_updated.xlsx'
+df.to_excel(new_file_path, index=False)
+print("Component Unique Identifier field has been updated.")
