@@ -11,3 +11,9 @@ This script is used to add 2 levels of identifers according to the repository's 
 # Python bulkupdater 
 ## Description 
 This script should work for all levels of ArchivesSpace
+# ls-all
+## Description
+This creates a list of all files and their filepaths within the directory the script is run in, including all subdirectories. The script outputs a csv file with each filepath as a row in column A
+# rename-from-ls
+## Description
+This scripts expects to see the output csv file from ls-all with the header "filepath" in row 1 of column A and "new_name" in row 1 of column B. Column B can be filled in with the new filename (minus extension and filepath), and the files will be renamed but left in their original folder structures. If a row does not have a value in new_name, the script will skip this row.
