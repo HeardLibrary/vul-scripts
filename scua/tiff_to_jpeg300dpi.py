@@ -42,7 +42,7 @@ def tiff_to_jpeg_300dpi(input_folder, output_folder, target_dpi=300):
 
 if __name__ == "__main__":
     # Update these paths to your folders
-    input_folder = "W:\\SpcScanSpecial Collections\\Manuscript Collections - Scanned Material\\NashvillePrideCollection-MSS1126\\Binder 1"
-    output_folder = "W:\\SpcScanSpecial Collections\\Manuscript Collections - Scanned Material\\NashvillePrideCollection-MSS1126\\Binder 1\\JPEG"
+    input_folder = "path/to/your/tiff_images"
+    output_folder = "path/to/your/jpeg_output"
 
     tiff_to_jpeg_300dpi(input_folder, output_folder)
